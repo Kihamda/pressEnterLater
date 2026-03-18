@@ -1,0 +1,15 @@
+[project]
+name = "press-enter-later"
+version = "0.1.0"
+description = "Simple GUI tool to schedule automated key presses"
+requires-python = ">=3.11"
+dependencies = [
+    "pynput>=1.7.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
