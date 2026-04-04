@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -21,64 +21,71 @@ jobs:
           - os: macos-latest
             artifact_name: pressEnterLater-macos
             build_name: pressEnterLater
-    
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
           uv sync
           uv pip install pyinstaller
-      
+
       - name: Build with PyInstaller (Windows)
         if: matrix.os == 'windows-latest'
         run: uv run pyinstaller main.py --onefile --windowed --name pressEnterLater
-      
+
       - name: Build with PyInstaller (Linux/macOS)
         if: matrix.os != 'windows-latest'
         run: uv run pyinstaller main.py --onefile --name pressEnterLater
-      
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.build_name }}
-  
+
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-    
+
     permissions:
       contents: write
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          cp artifacts/pressEnterLater-windows.exe/pressEnterLater.exe release-assets/pressEnterLater-windows.exe
+          cp artifacts/pressEnterLater-linux/pressEnterLater release-assets/pressEnterLater-linux
+          cp artifacts/pressEnterLater-macos/pressEnterLater release-assets/pressEnterLater-macos
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/pressEnterLater-windows.exe/pressEnterLater.exe
-            artifacts/pressEnterLater-linux/pressEnterLater
-            artifacts/pressEnterLater-macos/pressEnterLater
+            release-assets/pressEnterLater-windows.exe
+            release-assets/pressEnterLater-linux
+            release-assets/pressEnterLater-macos
           draft: false
           prerelease: false
         env:
