@@ -82,21 +82,13 @@ class PressEnterLaterApp:
         status_label = ttk.Label(main_frame, textvariable=self.status_var, font=("", 10, "bold"))
         status_label.grid(row=8, column=0, columnspan=2, pady=5)
         
-        # 文字入力（任意）
-        ttk.Label(main_frame, text="入力文字列:").grid(row=9, column=0, sticky=tk.W, pady=5)
-        self.text_var = tk.StringVar(value="")
-        text_entry = ttk.Entry(main_frame, textvariable=self.text_var, width=17)
-        text_entry.grid(row=9, column=1, sticky=tk.W, pady=5)
-        text_entry.bind('<KeyRelease>', lambda e: self.update_preview())
-
-        # 文字入力中に押しっぱなしにするキー（任意）
-        ttk.Label(main_frame, text="押しっぱなしキー:").grid(row=10, column=0, sticky=tk.W, pady=5)
+        # 同時押しキー（任意）
+        ttk.Label(main_frame, text="同時押しキー:").grid(row=9, column=0, sticky=tk.W, pady=5)
         self.hold_key_var = tk.StringVar(value="")
-        hold_key_combo = ttk.Combobox(main_frame, textvariable=self.hold_key_var, width=15)
-        hold_key_combo['values'] = ('', 'Shift', 'Ctrl', 'Alt', 'Win', 'Enter', 'Space', 'Tab', 'Esc')
-        hold_key_combo.grid(row=10, column=1, sticky=tk.W, pady=5)
+        hold_key_combo = ttk.Combobox(main_frame, textvariable=self.hold_key_var, width=15, state="readonly")
+        hold_key_combo['values'] = ('', 'Shift', 'Ctrl', 'Alt', 'Win')
+        hold_key_combo.grid(row=9, column=1, sticky=tk.W, pady=5)
         hold_key_combo.bind('<<ComboboxSelected>>', lambda e: self.update_preview())
-        hold_key_combo.bind('<KeyRelease>', lambda e: self.update_preview())
 
         # 初期プレビュー更新
         self.update_preview()
@@ -154,16 +146,10 @@ class PressEnterLaterApp:
             repeat = int(self.repeat_var.get())
             interval = float(self.repeat_interval_var.get())
             key = self.key_var.get()
-            text = self.text_var.get()
             hold_key = self.hold_key_var.get().strip()
             
             time_str = self.format_time(delay)
-            action = f"{key}キーを押します"
-            if text:
-                text_action = f"「{text}」と入力"
-                if hold_key:
-                    text_action = f"{hold_key}キーを押しながら{text_action}"
-                action = f"{text_action}し、{action}"
+            action = f"{hold_key}+{key}キーを押します" if hold_key else f"{key}キーを押します"
             
             if repeat == 1:
                 preview = f"{time_str}後に、{action}"
@@ -228,7 +214,6 @@ class PressEnterLaterApp:
                 remaining -= 1
             
             key = self.get_key(self.key_var.get())
-            text = self.text_var.get()
             hold_key_name = self.hold_key_var.get().strip()
             hold_key = self.get_key(hold_key_name) if hold_key_name else None
             
@@ -239,18 +224,15 @@ class PressEnterLaterApp:
                 
                 self.status_var.set(f"実行中... ({rep + 1}/{repeat})")
                 
-                # 任意の文字列を入力してから、キーを1回押す
-                if text:
+                # 修飾キーと指定キーを同時押し
+                if hold_key is not None:
+                    self.keyboard.press(hold_key)
+                try:
+                    self.keyboard.press(key)
+                    self.keyboard.release(key)
+                finally:
                     if hold_key is not None:
-                        self.keyboard.press(hold_key)
-                    try:
-                        self.keyboard.type(text)
-                    finally:
-                        if hold_key is not None:
-                            self.keyboard.release(hold_key)
-
-                self.keyboard.press(key)
-                self.keyboard.release(key)
+                        self.keyboard.release(hold_key)
                 
                 # 次の繰り返しまで待機
                 if rep < repeat - 1:
